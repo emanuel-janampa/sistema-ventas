@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 🔗 Conecta con el padre principal -->
+    <parent>
+        <groupId>com.sistema.ventas</groupId>
+        <artifactId>sistema-ventas</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>microservice</artifactId>
+
+    <!-- 🔥 IMPORTANTE -->
+    <packaging>pom</packaging>
+
+    <!-- 🔥 Módulos internos -->
+    <modules>
+        <module>products-service</module>
+        <module>inventory-service</module>
+        <module>orders-service</module>
+        <module>customers-service</module>
+    </modules>
+
+</project>

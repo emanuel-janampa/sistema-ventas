@@ -1,0 +1,53 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+        - id: products-service-products
+          uri: lb://PRODUCTS-SERVICE
+          predicates:
+            - Path=/api/products/**
+        - id: products-service-categories
+          uri: lb://PRODUCTS-SERVICE
+          predicates:
+            - Path=/api/categories/**
+        - id: orders-service-orders
+          uri: lb://ORDERS-SERVICE
+          predicates:
+            - Path=/api/orders/**
+        - id: orders-service-order-details
+          uri: lb://ORDERS-SERVICE
+          predicates:
+            - Path=/api/order-details/**
+        - id: inventory-service-stock
+          uri: lb://INVENTORY-SERVICE
+          predicates:
+            - Path=/api/stock/**
+        - id: inventory-service-stock-movements
+          uri: lb://INVENTORY-SERVICE
+          predicates:
+            - Path=/api/stock-movements/**
+        - id: customers-service-auth
+          uri: lb://CUSTOMERS-SERVICE
+          predicates:
+            - Path=/api/auth/**
+        - id: customers-service-users
+          uri: lb://CUSTOMERS-SERVICE
+          predicates:
+            - Path=/api/users/**
+        - id: customers-service-main
+          uri: lb://CUSTOMERS-SERVICE
+          predicates:
+            - Path=/api/customers/**
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    prefer-ip-address: true
