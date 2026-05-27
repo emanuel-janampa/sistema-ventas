@@ -5,6 +5,8 @@ import com.ventas.customers_service.dto.CustomerResponse;
 import com.ventas.customers_service.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.List;
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
 public class CustomerController {
+    @Value("${server.port}")
+    private String port;
 
     private final CustomerService service;
 
@@ -28,6 +32,7 @@ public class CustomerController {
 
     @GetMapping("/{id}")
     public CustomerResponse getById(@PathVariable Long id) {
+        System.out.println("Respuesta desde puerto: " + port);
         return service.getById(id);
     }
 

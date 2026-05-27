@@ -5,6 +5,8 @@ import com.ventas.orders_service.dto.OrderResponse;
 import com.ventas.orders_service.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.List;
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 public class OrderController {
+    @Value("${server.port}")
+    private String port;
 
     private final OrderService service;
 
@@ -28,12 +32,14 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public OrderResponse getById(@PathVariable Long id) {
+        System.out.println("Respuesta desde puerto: " + port);
         return service.getById(id);
     }
 
     @PutMapping("/{id}")
     public OrderResponse update(@PathVariable Long id,
-            @Valid @RequestBody OrderRequest request) {
+            @RequestBody OrderRequest request) {
+
         return service.update(id, request);
     }
 

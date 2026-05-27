@@ -5,6 +5,8 @@ import com.ventas.products_service.dto.ProductResponse;
 import com.ventas.products_service.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +16,8 @@ import java.util.List;
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
+    @Value("${server.port}")
+    private String port;
 
     private final ProductService service;
 
@@ -30,6 +34,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ProductResponse getById(@PathVariable Long id) {
+        System.out.println("Respuesta desde puerto: " + port);
         return service.getById(id);
     }
 

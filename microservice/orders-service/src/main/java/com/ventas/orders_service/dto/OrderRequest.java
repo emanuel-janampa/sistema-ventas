@@ -14,7 +14,7 @@ public class OrderRequest {
     @Positive(message = "Customer ID must be positive")
     private Long customerId;
 
+    private List<OrderItemRequest> items;
 
-    @NotEmpty(message = "Order must have at least one item")
-    private List<OrderItemRequest> items; 
+    private String status;
 }

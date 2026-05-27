@@ -6,6 +6,7 @@ import com.ventas.inventory_service.service.StockService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 
@@ -13,6 +14,9 @@ import java.util.List;
 @RequestMapping("/api/stock")
 @RequiredArgsConstructor
 public class StockController {
+
+    @Value("${server.port}")
+    private String port;
 
     private final StockService service;
 
@@ -23,6 +27,7 @@ public class StockController {
 
     @GetMapping("/{productId}")
     public StockResponse getByProduct(@PathVariable Long productId) {
+        System.out.println("Respuesta desde inventory-service puerto: " + port);
         return service.getByProductId(productId);
     }
 
