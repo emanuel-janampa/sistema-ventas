@@ -19,3 +19,7 @@ eureka:
 
   instance:
     prefer-ip-address: true
+
+jwt:
+  secret: mysecretkeymysecretkeymysecretkey12345
+  expiration: 3600000

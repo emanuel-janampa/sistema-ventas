@@ -59,7 +59,7 @@ services:
     ports:
       - "8081"
     deploy:
-      replicas: 2
+      replicas: 1
 
     depends_on:
       mysql-db:
@@ -80,7 +80,7 @@ services:
     ports:
       - "8082"
     deploy:
-      replicas: 2
+      replicas: 1
 
     depends_on:
       mysql-db:
@@ -101,7 +101,7 @@ services:
     ports:
       - "8083"
     deploy:
-      replicas: 2
+      replicas: 1
 
     depends_on:
       mysql-db:
@@ -121,7 +121,7 @@ services:
     ports:
       - "8084"
     deploy:
-      replicas: 2
+      replicas: 1
 
     depends_on:
       mysql-db:

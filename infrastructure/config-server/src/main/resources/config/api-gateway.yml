@@ -8,42 +8,167 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: products-service-products
-          uri: lb://PRODUCTS-SERVICE
-          predicates:
-            - Path=/api/products/**
-        - id: products-service-categories
-          uri: lb://PRODUCTS-SERVICE
-          predicates:
-            - Path=/api/categories/**
-        - id: orders-service-orders
-          uri: lb://ORDERS-SERVICE
-          predicates:
-            - Path=/api/orders/**
-        - id: orders-service-order-details
-          uri: lb://ORDERS-SERVICE
-          predicates:
-            - Path=/api/order-details/**
-        - id: inventory-service-stock
-          uri: lb://INVENTORY-SERVICE
-          predicates:
-            - Path=/api/stock/**
-        - id: inventory-service-stock-movements
-          uri: lb://INVENTORY-SERVICE
-          predicates:
-            - Path=/api/stock-movements/**
+        # 🔓 AUTH PÚBLICO
         - id: customers-service-auth
           uri: lb://CUSTOMERS-SERVICE
           predicates:
             - Path=/api/auth/**
-        - id: customers-service-users
+
+        # ==========================================
+        # 📦 MICROSERVICIO: PRODUCTS-SERVICE
+        # ==========================================
+        # 🔒 TABLA 1: PRODUCTS (Escritura -> SOLO ADMIN)
+        - id: products-write
+          uri: lb://PRODUCTS-SERVICE
+          predicates:
+            - Path=/api/products/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 1: PRODUCTS (Lectura -> ADMIN y CUSTOMER)
+        - id: products-read
+          uri: lb://PRODUCTS-SERVICE
+          predicates:
+            - Path=/api/products/**
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 2: CATEGORIES (Escritura -> SOLO ADMIN)
+        - id: categories-write
+          uri: lb://PRODUCTS-SERVICE
+          predicates:
+            - Path=/api/categories/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 2: CATEGORIES (Lectura -> ADMIN y CUSTOMER)
+        - id: categories-read
+          uri: lb://PRODUCTS-SERVICE
+          predicates:
+            - Path=/api/categories/**
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
+
+        # ==========================================
+        # 🛒 MICROSERVICIO: ORDERS-SERVICE
+        # ==========================================
+        # 🔒 TABLA 1: ORDERS (Escritura -> SOLO ADMIN)
+        - id: orders-write
+          uri: lb://ORDERS-SERVICE
+          predicates:
+            - Path=/api/orders/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 1: ORDERS (Lectura -> ADMIN y CUSTOMER)
+        - id: orders-read
+          uri: lb://ORDERS-SERVICE
+          predicates:
+            - Path=/api/orders/**
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 2: ORDER DETAILS (Escritura -> SOLO ADMIN)
+        - id: order-details-write
+          uri: lb://ORDERS-SERVICE
+          predicates:
+            - Path=/api/order-details/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 2: ORDER DETAILS (Lectura -> ADMIN y CUSTOMER)
+        - id: order-details-read
+          uri: lb://ORDERS-SERVICE
+          predicates:
+            - Path=/api/order-details/**
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
+
+        # ==========================================
+        # 🏭 MICROSERVICIO: INVENTORY-SERVICE
+        # ==========================================
+        # 🔒 TABLA 1: STOCK (Escritura -> SOLO ADMIN)
+        - id: stock-write
+          uri: lb://INVENTORY-SERVICE
+          predicates:
+            - Path=/api/stock/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 1: STOCK (Lectura -> ADMIN y CUSTOMER)
+        - id: stock-read
+          uri: lb://INVENTORY-SERVICE
+          predicates:
+            - Path=/api/stock/**
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 2: STOCK MOVEMENTS (Escritura -> SOLO ADMIN)
+        - id: stock-movements-write
+          uri: lb://INVENTORY-SERVICE
+          predicates:
+            - Path=/api/stock-movements/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 2: STOCK MOVEMENTS (Lectura -> ADMIN y CUSTOMER)
+        - id: stock-movements-read
+          uri: lb://INVENTORY-SERVICE
+          predicates:
+            - Path=/api/stock-movements/**
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
+
+        # ==========================================
+        # 👥 MICROSERVICIO: CUSTOMERS-SERVICE
+        # ==========================================
+        # 🔒 TABLA 1: USERS (Escritura -> SOLO ADMIN)
+        - id: users-write
           uri: lb://CUSTOMERS-SERVICE
           predicates:
             - Path=/api/users/**
-        - id: customers-service-main
+            - Method=POST,PUT,DELETE
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 1: USERS (Lectura -> ADMIN y CUSTOMER)
+        - id: users-read
+          uri: lb://CUSTOMERS-SERVICE
+          predicates:
+            - Path=/api/users/**
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 2: CUSTOMERS (Escritura -> SOLO ADMIN)
+        - id: customers-write
           uri: lb://CUSTOMERS-SERVICE
           predicates:
             - Path=/api/customers/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - JwtAuthenticationFilter
+
+        # 🔒 TABLA 2: CUSTOMERS (Lectura -> ADMIN y CUSTOMER)
+        - id: customers-read
+          uri: lb://CUSTOMERS-SERVICE
+          predicates:
+            - Path=/api/customers/**
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
 
 eureka:
   client:
@@ -51,3 +176,7 @@ eureka:
       defaultZone: http://eureka-server:8761/eureka/
   instance:
     prefer-ip-address: true
+
+jwt:
+  secret: mysecretkeymysecretkeymysecretkey12345
+  expiration: 3600000
