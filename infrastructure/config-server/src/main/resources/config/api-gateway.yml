@@ -180,3 +180,7 @@ eureka:
 jwt:
   secret: mysecretkeymysecretkeymysecretkey12345
   expiration: 3600000
+
+logging:
+  level:
+    com.ventas.api_gateway: INFO
