@@ -15,14 +15,20 @@ spring:
     openfeign:
       circuitbreaker:
         enabled: true
+    config:
+      fail-fast: true
+      retry:
+        max-attempts: 20
+        initial-interval: 3000
+        multiplier: 1.5
 
 eureka:
   client:
-    serviceUrl:
+    service-url:
       defaultZone: http://eureka-server:8761/eureka/
-
   instance:
     prefer-ip-address: true
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
 
 resilience4j:
   circuitbreaker:
@@ -44,3 +50,9 @@ resilience4j:
         minimumNumberOfCalls: 3
         failureRateThreshold: 50
         waitDurationInOpenState: 10s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"

@@ -50,7 +50,15 @@ public class GlobalExceptionHandler {
         public Map<String, Object> handleFeignException(feign.FeignException ex) {
                 return Map.of(
                                 "error",
-                                "Error de comunicación con el servicio externo de forma directa: " + ex.getMessage(),
+                                "Error de comunicación con el servicio externo: " + ex.getMessage(),
+                                "timestamp", LocalDateTime.now());
+        }
+
+        @ExceptionHandler(RuntimeException.class)
+        @ResponseStatus(org.springframework.http.HttpStatus.BAD_REQUEST)
+        public Map<String, Object> handleRuntimeException(RuntimeException ex) {
+                return Map.of(
+                                "error", ex.getMessage(),
                                 "timestamp", LocalDateTime.now());
         }
 }

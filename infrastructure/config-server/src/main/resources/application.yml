@@ -12,18 +12,25 @@ spring:
     config:
       server:
         native:
-          search-locations: "classpath:/config"
+          search-locations: classpath:/config
+
+  main:
+    allow-circular-references: true
 
 eureka:
   client:
     service-url:
       defaultZone: http://eureka-server:8761/eureka/
-
   instance:
     prefer-ip-address: true
+    hostname: config-server
 
 management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

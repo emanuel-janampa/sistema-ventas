@@ -11,15 +11,28 @@ spring:
       ddl-auto: update
     show-sql: true
     database-platform: org.hibernate.dialect.MySQLDialect
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        max-attempts: 20
+        initial-interval: 3000
+        multiplier: 1.5
 
 eureka:
   client:
-    serviceUrl:
+    service-url:
       defaultZone: http://eureka-server:8761/eureka/
-
   instance:
     prefer-ip-address: true
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
 
 jwt:
   secret: mysecretkeymysecretkeymysecretkey12345
   expiration: 3600000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

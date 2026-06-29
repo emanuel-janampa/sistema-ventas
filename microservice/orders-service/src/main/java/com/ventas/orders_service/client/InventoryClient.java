@@ -13,7 +13,7 @@ import com.ventas.orders_service.fallback.InventoryClientFallback;
 public interface InventoryClient {
 
     @GetMapping("/api/stock/{productId}")
-    InventoryResponse getStock(@PathVariable Long productId);
+    InventoryResponse getStock(@PathVariable("productId") Long productId);
 
     @PostMapping("/api/stock-movements")
     void createMovement(@RequestBody StockMovementRequest request);

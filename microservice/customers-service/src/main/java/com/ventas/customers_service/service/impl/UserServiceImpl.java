@@ -57,7 +57,7 @@ public class UserServiceImpl implements UserService {
 
         String token = jwtService.generateToken(user.getUsername(), user.getRole());
 
-        return new LoginResponse(token);
+        return new LoginResponse(token, user.getRole());
     }
 
     @Override

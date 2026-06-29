@@ -1,162 +1,175 @@
 services:
-  # =========================================
-  # EUREKA SERVER
-  # =========================================
   eureka-server:
     build: ./infrastructure/eureka-server
     container_name: eureka-server
     ports:
       - "8761:8761"
+    environment:
+      EUREKA_INSTANCE_HOSTNAME: eureka-server
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8761/actuator/health || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
     networks:
       - ventas-network
 
-  # =========================================
-  # CONFIG SERVER
-  # =========================================
   config-server:
     build: ./infrastructure/config-server
     container_name: config-server
     ports:
       - "8888:8888"
-
     depends_on:
       eureka-server:
-        condition: service_started
-
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8888/actuator/health || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 25s
     networks:
       - ventas-network
 
-  # =========================================
-  # MYSQL DATABASE
-  # =========================================
   mysql-db:
     image: mysql:8.0
     container_name: mysql-db
-
     environment:
       MYSQL_ROOT_PASSWORD: root
-
     ports:
       - "3306:3306"
-
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
-      retries: 10
-
+      retries: 20
+      start_period: 20s
     networks:
       - ventas-network
-  # =========================================
-  # PRODUCTS SERVICE
-  # =========================================
+
   products-service:
     build: ./microservice/products-service
+    container_name: products-service
     ports:
-      - "8081"
-    deploy:
-      replicas: 1
-
+      - "8081:8081"
     depends_on:
       mysql-db:
         condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
-
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/products_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
     networks:
       - ventas-network
 
-  # =========================================
-  # ORDERS SERVICE
-  # =========================================
   orders-service:
     build: ./microservice/orders-service
+    container_name: orders-service
     ports:
-      - "8082"
-    deploy:
-      replicas: 1
-
+      - "8082:8082"
     depends_on:
       mysql-db:
         condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
-
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/orders_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
     networks:
       - ventas-network
 
-  # =========================================
-  # INVENTORY SERVICE
-  # =========================================
   inventory-service:
     build: ./microservice/inventory-service
+    container_name: inventory-service
     ports:
-      - "8083"
-    deploy:
-      replicas: 1
-
+      - "8083:8083"
     depends_on:
       mysql-db:
         condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
-
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/inventory_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
     networks:
       - ventas-network
-  # =========================================
-  # CUSTOMERS SERVICE
-  # =========================================
+
   customers-service:
     build: ./microservice/customers-service
+    container_name: customers-service
     ports:
-      - "8084"
-    deploy:
-      replicas: 1
-
+      - "8084:8084"
     depends_on:
       mysql-db:
         condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       eureka-server:
-        condition: service_started
-
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/customers_db?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
     networks:
       - ventas-network
 
-  # =========================================
-  # API GATEWAY
-  # =========================================
   api-gateway:
     build: ./infrastructure/api-gateway
     container_name: api-gateway
     ports:
       - "8090:8090"
-
     depends_on:
-      - eureka-server
-      - config-server
-      - products-service
-      - orders-service
-      - inventory-service
-      - customers-service
-
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
       - ventas-network
 
-# =========================================
-# NETWORK
-# =========================================
 networks:
   ventas-network:
     driver: bridge

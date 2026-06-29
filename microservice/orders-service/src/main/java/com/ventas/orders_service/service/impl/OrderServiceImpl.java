@@ -48,28 +48,42 @@ public class OrderServiceImpl implements OrderService {
         // =========================
         @Override
         @Transactional
-        @CircuitBreaker(name = "ordersCircuit", fallbackMethod = "createFallback")
         public OrderResponse create(OrderRequest request) {
 
                 validateRequest(request);
 
-                customerClient.getById(request.getCustomerId());
+                try {
+                        log.info("Fetching customer with ID: {}", request.getCustomerId());
+                        customerClient.getById(request.getCustomerId());
+                } catch (Exception e) {
+                        log.error("Error fetching customer: {}", e.getMessage(), e);
+                        throw new RuntimeException("Customer not found: " + request.getCustomerId());
+                }
 
                 BigDecimal totalOrder = BigDecimal.ZERO;
 
                 for (OrderItemRequest item : request.getItems()) {
 
-                        ProductResponse product = productClient.getById(item.getProductId());
-                        InventoryResponse stock = inventoryClient.getStock(item.getProductId());
+                        try {
+                                log.info("Fetching product with ID: {}", item.getProductId());
+                                ProductResponse product = productClient.getById(item.getProductId());
+                                log.info("Fetching stock for product: {}", item.getProductId());
+                                InventoryResponse stock = inventoryClient.getStock(item.getProductId());
 
-                        if (stock.getQuantity() < item.getQuantity()) {
-                                throw new RuntimeException("Insufficient stock for product: " + product.getName());
+                                if (stock.getQuantity() < item.getQuantity()) {
+                                        throw new RuntimeException(
+                                                        "Insufficient stock for product: " + product.getName());
+                                }
+
+                                BigDecimal subtotal = product.getPrice()
+                                                .multiply(BigDecimal.valueOf(item.getQuantity()));
+
+                                totalOrder = totalOrder.add(subtotal);
+                        } catch (Exception e) {
+                                log.error("Error processing item {}: {}", item.getProductId(), e.getMessage(), e);
+                                throw new RuntimeException("Error al procesar producto " + item.getProductId() + ": "
+                                                + e.getMessage());
                         }
-
-                        BigDecimal subtotal = product.getPrice()
-                                        .multiply(BigDecimal.valueOf(item.getQuantity()));
-
-                        totalOrder = totalOrder.add(subtotal);
                 }
 
                 Order order = Order.builder()
@@ -81,51 +95,46 @@ public class OrderServiceImpl implements OrderService {
                                 .orderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                                 .build();
 
+                log.info("Saving order: {}", order.getOrderNumber());
                 Order savedOrder = repository.save(order);
 
                 for (OrderItemRequest item : request.getItems()) {
 
-                        ProductResponse product = productClient.getById(item.getProductId());
+                        try {
+                                ProductResponse product = productClient.getById(item.getProductId());
 
-                        StockMovementRequest movement = StockMovementRequest.builder()
-                                        .productId(item.getProductId())
-                                        .type("SALIDA")
-                                        .quantity(item.getQuantity())
-                                        .reason("VENTA")
-                                        .build();
+                                StockMovementRequest movement = StockMovementRequest.builder()
+                                                .productId(item.getProductId())
+                                                .type("SALIDA")
+                                                .quantity(item.getQuantity())
+                                                .reason("VENTA")
+                                                .build();
 
-                        inventoryClient.createMovement(movement);
+                                log.info("Creating stock movement for product {}: quantity {}", item.getProductId(),
+                                                item.getQuantity());
+                                inventoryClient.createMovement(movement);
 
-                        OrderDetail detail = OrderDetail.builder()
-                                        .order(savedOrder)
-                                        .productId(item.getProductId())
-                                        .quantity(item.getQuantity())
-                                        .price(product.getPrice())
-                                        .subtotal(product.getPrice()
-                                                        .multiply(BigDecimal.valueOf(item.getQuantity())))
-                                        .build();
+                                OrderDetail detail = OrderDetail.builder()
+                                                .order(savedOrder)
+                                                .productId(item.getProductId())
+                                                .quantity(item.getQuantity())
+                                                .price(product.getPrice())
+                                                .subtotal(product.getPrice()
+                                                                .multiply(BigDecimal.valueOf(item.getQuantity())))
+                                                .build();
 
-                        detailRepository.save(detail);
+                                detailRepository.save(detail);
+                                log.info("Saved order detail for product: {}", item.getProductId());
+                        } catch (Exception e) {
+                                log.error("Error saving order detail for product {}: {}", item.getProductId(),
+                                                e.getMessage(), e);
+                                throw new RuntimeException("Error al guardar detalle de orden: " + e.getMessage());
+                        }
                 }
 
+                log.info("Order created successfully: {}", savedOrder.getId());
                 return mapper.toResponse(savedOrder);
-        }
 
-        // =========================
-        // FALLBACK CREATE
-        // =========================
-        public OrderResponse createFallback(OrderRequest request, Throwable ex) {
-
-                log.error("ORDER SERVICE FALLBACK ACTIVATED: {}", ex.getMessage());
-
-                return OrderResponse.builder()
-                                .id(null)
-                                .customerId(request.getCustomerId())
-                                .total(BigDecimal.ZERO)
-                                .status("SERVICE_UNAVAILABLE")
-                                .orderNumber("FALLBACK")
-                                .createdAt(null)
-                                .build();
         }
 
         // =========================
