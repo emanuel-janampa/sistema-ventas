@@ -166,6 +166,19 @@ export default function Productos() {
     if (!formValues.categoriaId) { setSnackbar({ open: true, severity: 'error', message: 'Debe seleccionar una categoría' }); return; }
 
     try {
+      const duplicate = rows.some((row) => {
+        const rowCategoryId = Number(row.categoria?.id || row.categoriaId);
+        const currentCategoryId = Number(formValues.categoriaId);
+        return row.nombre?.trim().toLowerCase() === formValues.nombre.trim().toLowerCase()
+          && rowCategoryId === currentCategoryId
+          && (!editing || Number(row.id) !== Number(editing.id));
+      });
+
+      if (duplicate) {
+        setSnackbar({ open: true, severity: 'error', message: 'Ya existe un producto con ese nombre en esta categoría' });
+        return;
+      }
+
       const payload = {
         nombre: formValues.nombre,
         descripcion: formValues.descripcion,
@@ -205,7 +218,15 @@ export default function Productos() {
       setOpenForm(false);
       fetchData();
     } catch (err) {
-      setSnackbar({ open: true, severity: 'error', message: 'Error al guardar el producto' });
+      let message = 'Error al guardar el producto';
+      if (err?.response?.data) {
+        const data = err.response.data;
+        if (data.error) message = data.error;
+        else if (data.errors) {
+          message = Object.values(data.errors).join(', ');
+        }
+      }
+      setSnackbar({ open: true, severity: 'error', message });
     }
   };
 
@@ -226,20 +247,25 @@ export default function Productos() {
       setSnackbar({ open: true, severity: 'error', message: 'El nombre de la categoría es obligatorio' });
       return;
     }
+    if (categories.some((cat) => cat.nombre?.trim().toLowerCase() === catForm.nombre.trim().toLowerCase())) {
+      setSnackbar({ open: true, severity: 'error', message: 'Ya existe una categoría con ese nombre' });
+      return;
+    }
     try {
       const res = await createCategoria(catForm);
       const newCategory = normalizeCategory(res.data || catForm);
       setSnackbar({ open: true, severity: 'success', message: 'Categoría creada' });
       setOpenCatDialog(false);
       setCatForm({ nombre: '', descripcion: '' });
-      setCategories(prev => [newCategory, ...(prev || [])]);
+      setCategories((prev) => [newCategory, ...(prev || [])]);
       fetchData();
     } catch (e) {
-      const localCat = normalizeCategory({ id: `local-${Date.now()}`, nombre: catForm.nombre, descripcion: catForm.descripcion });
-      setCategories(prev => [localCat, ...(prev || [])]);
-      setOpenCatDialog(false);
-      setCatForm({ nombre: '', descripcion: '' });
-      setSnackbar({ open: true, severity: 'warning', message: 'Categoría creada localmente (backend no disponible)' });
+      let message = 'Error al crear la categoría';
+      if (e?.response?.data?.message) message = e.response.data.message;
+      else if (e?.response?.status === 409) message = 'Ya existe una categoría con ese nombre';
+      else if (e?.response?.status === 404) message = 'Ruta de categorías no encontrada';
+      else if (!e?.response) message = 'No se pudo conectar con el servidor de categorías';
+      setSnackbar({ open: true, severity: 'error', message });
     }
   };
 

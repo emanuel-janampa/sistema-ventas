@@ -77,15 +77,33 @@ api.interceptors.response.use(
     try {
       const status = error.response ? error.response.status : 0;
       let message = 'Ocurrió un error';
-      if (!error.response) message = 'Error de conexión. Verifique su red.';
-      else if (status === 401) {
+      if (!error.response) {
+        message = 'Error de conexión. Verifique su red.';
+      } else if (status === 401) {
         message = 'Sesión expirada. Inicie sesión nuevamente.';
         localStorage.removeItem('token');
         localStorage.removeItem('role');
-      } else if (status === 404) message = 'Recurso no encontrado.';
-      else if (status === 409) message = 'Registro duplicado.';
-      else if (status >= 500) message = 'Error del servidor. Intente más tarde.';
-      else if (error.response.data && error.response.data.message) message = error.response.data.message;
+        localStorage.removeItem('username');
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new Event('app-logout'));
+        }
+      } else if (status === 404) {
+        message = error.response.data?.error || 'Recurso no encontrado.';
+      } else if (status === 409) {
+        message = error.response.data?.error || 'Registro duplicado.';
+      } else if (status === 400) {
+        message = error.response.data?.error || error.response.data?.message || 'Solicitud inválida.';
+      } else if (status >= 500) {
+        message = 'Error del servidor. Intente más tarde.';
+      } else if (error.response.data?.message) {
+        message = error.response.data.message;
+      } else if (error.response.data?.error) {
+        message = error.response.data.error;
+      } else if (error.response.data?.errors) {
+        message = Array.isArray(error.response.data.errors)
+          ? error.response.data.errors.join(', ')
+          : Object.values(error.response.data.errors).flat().join(', ');
+      }
 
       // Emite un evento global para mostrar notificaciones en la UI
       if (typeof window !== 'undefined' && window.dispatchEvent) {

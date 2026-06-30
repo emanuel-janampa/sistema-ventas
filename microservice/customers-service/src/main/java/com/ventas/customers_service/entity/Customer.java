@@ -28,6 +28,7 @@ public class Customer {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(unique = true)
     private String phone;
 
     @CreationTimestamp

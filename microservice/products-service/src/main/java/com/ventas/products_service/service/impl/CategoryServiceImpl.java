@@ -52,6 +52,10 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
+        if (!category.getName().equalsIgnoreCase(request.getName()) && repository.existsByName(request.getName())) {
+            throw new RuntimeException("La categoría ya existe");
+        }
+
         category.setName(request.getName());
         category.setDescription(request.getDescription());
 

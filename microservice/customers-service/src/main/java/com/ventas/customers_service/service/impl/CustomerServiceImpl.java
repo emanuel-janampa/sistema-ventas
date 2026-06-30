@@ -21,8 +21,15 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public CustomerResponse create(CustomerRequest request) {
 
-        if (repository.existsByEmail(request.getEmail())) {
+        String normalizedEmail = request.getEmail() == null ? null : request.getEmail().trim().toLowerCase();
+        String normalizedPhone = request.getPhone() == null ? null : request.getPhone().trim();
+
+        if (repository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new RuntimeException("El correo ya está registrado");
+        }
+
+        if (normalizedPhone != null && repository.existsByPhone(normalizedPhone)) {
+            throw new RuntimeException("El teléfono ya está registrado");
         }
 
         Customer customer = mapper.toEntity(request);
@@ -50,15 +57,23 @@ public class CustomerServiceImpl implements CustomerService {
 
         Customer customer = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("cliente no encontrado"));
-        if (!customer.getEmail().equals(request.getEmail()) &&
-                repository.existsByEmail(request.getEmail())) {
+        String normalizedEmail = request.getEmail() == null ? null : request.getEmail().trim().toLowerCase();
+        String normalizedPhone = request.getPhone() == null ? null : request.getPhone().trim();
+
+        if (!customer.getEmail().equalsIgnoreCase(normalizedEmail)
+                && repository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new RuntimeException("El correo ya registrado");
         }
 
-        customer.setFirstName(request.getFirstName());
-        customer.setLastName(request.getLastName());
-        customer.setEmail(request.getEmail());
-        customer.setPhone(request.getPhone());
+        if (normalizedPhone != null && !normalizedPhone.equals(customer.getPhone())
+                && repository.existsByPhone(normalizedPhone)) {
+            throw new RuntimeException("El teléfono ya está registrado");
+        }
+
+        customer.setFirstName(request.getFirstName().trim());
+        customer.setLastName(request.getLastName().trim());
+        customer.setEmail(normalizedEmail);
+        customer.setPhone(normalizedPhone);
 
         return mapper.toResponse(repository.save(customer));
     }

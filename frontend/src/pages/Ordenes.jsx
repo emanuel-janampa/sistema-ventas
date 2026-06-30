@@ -23,7 +23,7 @@ import DataTable from '../components/DataTable';
 import Loader from '../components/Loader';
 import AlertSnackbar from '../components/AlertSnackbar';
 
-import { getOrdenes, createOrden } from '../services/ordenes.service';
+import { getOrdenes, createOrden, getOrden, updateOrden, getDetallesOrden } from '../services/ordenes.service';
 import { getClientes } from '../services/clientes.service';
 import { getProductos } from '../services/productos.service';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +39,10 @@ export default function Ordenes() {
   const [formValues, setFormValues] = useState({ customerId: '', notes: '', items: [], currentProductId: '', currentQuantity: 1 });
 
   const [snackbar, setSnackbar] = useState({ open: false, severity: 'success', message: '' });
+  const [editOpen, setEditOpen] = useState(false);
+  const [editOrder, setEditOrder] = useState(null);
+  const [editDetails, setEditDetails] = useState([]);
+  const [editStatus, setEditStatus] = useState('PENDING');
 
   const fetchClientes = async () => {
     try {
@@ -96,6 +100,21 @@ export default function Ordenes() {
     return () => window.removeEventListener('open-create-orden', onOpen);
   }, []);
 
+  const handleOpenEdit = async (row) => {
+    try {
+      setEditOrder(null);
+      setEditDetails([]);
+      setEditOpen(true);
+      const [orderRes, detailsRes] = await Promise.all([getOrden(row.id), getDetallesOrden(row.id)]);
+      setEditOrder({ ...orderRes.data, clienteNombre: row.clienteNombre });
+      setEditDetails(detailsRes.data || []);
+      setEditStatus(orderRes.data.status || 'PENDING');
+    } catch (err) {
+      setSnackbar({ open: true, severity: 'error', message: 'No se pudo cargar la orden' });
+      setEditOpen(false);
+    }
+  };
+
   const handleAddItem = () => {
     if (!formValues.currentProductId) {
       setSnackbar({ open: true, severity: 'error', message: 'Seleccione un producto para agregar al carrito' });
@@ -135,6 +154,20 @@ export default function Ordenes() {
   }, [formValues.items, productos]);
 
   const cartTotal = useMemo(() => cartItems.reduce((sum, item) => sum + item.subtotal, 0), [cartItems]);
+
+  const subtotalValue = useMemo(() => {
+    if (!editDetails || editDetails.length === 0) return 0;
+    return editDetails.reduce((sum, item) => {
+      const price = item.price ?? item.precio ?? 0;
+      const qty = item.quantity ?? item.cantidad ?? 0;
+      return sum + price * qty;
+    }, 0);
+  }, [editDetails]);
+
+  const igvValue = useMemo(() => {
+    if (!editOrder) return 0;
+    return Number((editOrder.total - subtotalValue).toFixed(2));
+  }, [editOrder, subtotalValue]);
 
   const handleCreate = async () => {
     if (!formValues.customerId) {
@@ -192,7 +225,8 @@ export default function Ordenes() {
         <DataTable
           columns={columns}
           rows={rows}
-          onEdit={(r) => navigate(`/ordenes/${r.id}`)}
+          onEdit={(r) => handleOpenEdit(r)}
+          onView={(r) => navigate(`/ordenes/${r.id}`)}
           emptyTitle="Sin órdenes"
           emptyDescription="No hay órdenes para mostrar."
           emptyAction={clientes.length === 0 ? (
@@ -202,6 +236,59 @@ export default function Ordenes() {
           )}
         />
       )}
+
+        <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">
+          <DialogTitle>Editar Orden</DialogTitle>
+          <DialogContent>
+            {editOrder ? (
+              <Box>
+                <Typography><strong>Orden:</strong> {editOrder.orderNumber}</Typography>
+                <Typography><strong>Cliente:</strong> {editOrder.cliente?.nombre || editOrder.clienteNombre}</Typography>
+                <FormControl fullWidth margin="normal" size="small">
+                  <InputLabel>Estado</InputLabel>
+                  <Select value={editStatus} label="Estado" onChange={(e) => setEditStatus(e.target.value)}>
+                    <MenuItem value="PENDING">PENDING</MenuItem>
+                    <MenuItem value="PAID">PAID</MenuItem>
+                    <MenuItem value="CANCELED">CANCELED</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <Box sx={{ mt: 2, px: 1 }}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>Resumen</Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
+                    <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                      <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                      <Typography variant="h6">{subtotalValue.toFixed(2)}</Typography>
+                    </Box>
+                    <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                      <Typography variant="body2" color="text.secondary">IGV</Typography>
+                      <Typography variant="h6">{igvValue.toFixed(2)}</Typography>
+                    </Box>
+                    <Box sx={{ gridColumn: 'span 2', p: 2, bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 1 }}>
+                      <Typography variant="body2" color="inherit">Total</Typography>
+                      <Typography variant="h5" color="inherit">{editOrder?.total?.toFixed(2) ?? '0.00'}</Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            ) : (
+              <Typography>Cargando...</Typography>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditOpen(false)}>Cerrar</Button>
+            <Button variant="contained" onClick={async () => {
+              try {
+                await updateOrden(editOrder.id, { status: editStatus });
+                setSnackbar({ open: true, severity: 'success', message: 'Estado actualizado' });
+                setEditOpen(false);
+                fetchData();
+              } catch (err) {
+                setSnackbar({ open: true, severity: 'error', message: 'Error al actualizar orden' });
+              }
+            }}>Guardar</Button>
+          </DialogActions>
+        </Dialog>
 
       <Dialog open={openForm} onClose={() => setOpenForm(false)} fullWidth maxWidth="md">
         <DialogTitle>Crear Orden</DialogTitle>

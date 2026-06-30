@@ -19,7 +19,7 @@ spring:
         # ==========================================
         # 🔒 TABLA 1: PRODUCTS (Escritura -> SOLO ADMIN)
         - id: products-write
-          uri: lb://PRODUCTS-SERVICE
+          uri: lb://products-service
           predicates:
             - Path=/api/products/**
             - Method=POST,PUT,DELETE
@@ -28,7 +28,7 @@ spring:
 
         # 🔒 TABLA 1: PRODUCTS (Lectura -> ADMIN y CUSTOMER)
         - id: products-read
-          uri: lb://PRODUCTS-SERVICE
+          uri: lb://products-service
           predicates:
             - Path=/api/products/**
             - Method=GET
@@ -37,7 +37,7 @@ spring:
 
         # 🔒 TABLA 2: CATEGORIES (Escritura -> SOLO ADMIN)
         - id: categories-write
-          uri: lb://PRODUCTS-SERVICE
+          uri: lb://products-service
           predicates:
             - Path=/api/categories/**
             - Method=POST,PUT,DELETE
@@ -46,7 +46,7 @@ spring:
 
         # 🔒 TABLA 2: CATEGORIES (Lectura -> ADMIN y CUSTOMER)
         - id: categories-read
-          uri: lb://PRODUCTS-SERVICE
+          uri: lb://products-service
           predicates:
             - Path=/api/categories/**
             - Method=GET
@@ -58,7 +58,7 @@ spring:
         # ==========================================
         # 🔒 TABLA 1: ORDERS (Escritura -> SOLO ADMIN)
         - id: orders-write
-          uri: lb://ORDERS-SERVICE
+          uri: lb://orders-service
           predicates:
             - Path=/api/orders/**
             - Method=POST,PUT,DELETE
@@ -67,7 +67,7 @@ spring:
 
         # 🔒 TABLA 1: ORDERS (Lectura -> ADMIN y CUSTOMER)
         - id: orders-read
-          uri: lb://ORDERS-SERVICE
+          uri: lb://orders-service
           predicates:
             - Path=/api/orders/**
             - Method=GET
@@ -76,7 +76,7 @@ spring:
 
         # 🔒 TABLA 2: ORDER DETAILS (Escritura -> SOLO ADMIN)
         - id: order-details-write
-          uri: lb://ORDERS-SERVICE
+          uri: lb://orders-service
           predicates:
             - Path=/api/order-details/**
             - Method=POST,PUT,DELETE
@@ -85,7 +85,7 @@ spring:
 
         # 🔒 TABLA 2: ORDER DETAILS (Lectura -> ADMIN y CUSTOMER)
         - id: order-details-read
-          uri: lb://ORDERS-SERVICE
+          uri: lb://orders-service
           predicates:
             - Path=/api/order-details/**
             - Method=GET
@@ -97,7 +97,7 @@ spring:
         # ==========================================
         # 🔒 TABLA 1: STOCK (Escritura -> SOLO ADMIN)
         - id: stock-write
-          uri: lb://INVENTORY-SERVICE
+          uri: lb://inventory-service
           predicates:
             - Path=/api/stock/**
             - Method=POST,PUT,DELETE
@@ -106,7 +106,7 @@ spring:
 
         # 🔒 TABLA 1: STOCK (Lectura -> ADMIN y CUSTOMER)
         - id: stock-read
-          uri: lb://INVENTORY-SERVICE
+          uri: lb://inventory-service
           predicates:
             - Path=/api/stock/**
             - Method=GET
@@ -115,7 +115,7 @@ spring:
 
         # 🔒 TABLA 2: STOCK MOVEMENTS (Escritura -> SOLO ADMIN)
         - id: stock-movements-write
-          uri: lb://INVENTORY-SERVICE
+          uri: lb://inventory-service
           predicates:
             - Path=/api/stock-movements/**
             - Method=POST,PUT,DELETE
@@ -124,7 +124,7 @@ spring:
 
         # 🔒 TABLA 2: STOCK MOVEMENTS (Lectura -> ADMIN y CUSTOMER)
         - id: stock-movements-read
-          uri: lb://INVENTORY-SERVICE
+          uri: lb://inventory-service
           predicates:
             - Path=/api/stock-movements/**
             - Method=GET
@@ -136,7 +136,7 @@ spring:
         # ==========================================
         # 🔒 TABLA 1: USERS (Escritura -> SOLO ADMIN)
         - id: users-write
-          uri: lb://CUSTOMERS-SERVICE
+          uri: lb://customers-service
           predicates:
             - Path=/api/users/**
             - Method=POST,PUT,DELETE
@@ -145,7 +145,7 @@ spring:
 
         # 🔒 TABLA 1: USERS (Lectura -> ADMIN y CUSTOMER)
         - id: users-read
-          uri: lb://CUSTOMERS-SERVICE
+          uri: lb://customers-service
           predicates:
             - Path=/api/users/**
             - Method=GET
@@ -153,8 +153,16 @@ spring:
             - JwtAuthenticationFilter
 
         # 🔒 TABLA 2: CUSTOMERS (Escritura -> SOLO ADMIN)
-        - id: customers-write
-          uri: lb://CUSTOMERS-SERVICE
+        - id: customers-write-root
+          uri: lb://customers-service
+          predicates:
+            - Path=/api/customers
+            - Method=POST,PUT,DELETE
+          filters:
+            - JwtAuthenticationFilter
+
+        - id: customers-write-subpaths
+          uri: lb://customers-service
           predicates:
             - Path=/api/customers/**
             - Method=POST,PUT,DELETE
@@ -162,8 +170,16 @@ spring:
             - JwtAuthenticationFilter
 
         # 🔒 TABLA 2: CUSTOMERS (Lectura -> ADMIN y CUSTOMER)
-        - id: customers-read
-          uri: lb://CUSTOMERS-SERVICE
+        - id: customers-read-root
+          uri: lb://customers-service
+          predicates:
+            - Path=/api/customers
+            - Method=GET
+          filters:
+            - JwtAuthenticationFilter
+
+        - id: customers-read-subpaths
+          uri: lb://customers-service
           predicates:
             - Path=/api/customers/**
             - Method=GET

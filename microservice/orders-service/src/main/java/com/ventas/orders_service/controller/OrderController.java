@@ -2,6 +2,7 @@ package com.ventas.orders_service.controller;
 
 import com.ventas.orders_service.dto.OrderRequest;
 import com.ventas.orders_service.dto.OrderResponse;
+import com.ventas.orders_service.dto.OrderStatusRequest;
 import com.ventas.orders_service.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,7 @@ public class OrderController {
 
     @PutMapping("/{id}")
     public OrderResponse update(@PathVariable Long id,
-            @RequestBody OrderRequest request) {
+            @Valid @RequestBody OrderStatusRequest request) {
 
         return service.update(id, request);
     }

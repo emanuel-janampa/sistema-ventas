@@ -25,7 +25,14 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse create(ProductRequest request) {
-        Category category = categoryRepository.findById(request.getCategoryId())
+        String normalizedName = request.getName().trim();
+        Long categoryId = request.getCategoryId();
+
+        if (repository.existsByNameIgnoreCaseAndCategoryId(normalizedName, categoryId)) {
+            throw new RuntimeException("Ya existe un producto con ese nombre en esta categoría");
+        }
+
+        Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
         Product product = mapper.toEntity(request, category);
@@ -54,10 +61,17 @@ public class ProductServiceImpl implements ProductService {
         Product product = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-        Category category = categoryRepository.findById(request.getCategoryId())
+        String normalizedName = request.getName().trim();
+        Long categoryId = request.getCategoryId();
+
+        if (repository.existsByNameIgnoreCaseAndCategoryIdAndIdNot(normalizedName, categoryId, id)) {
+            throw new RuntimeException("Ya existe un producto con ese nombre en esta categoría");
+        }
+
+        Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
 
-        product.setName(request.getName());
+        product.setName(normalizedName);
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setCategory(category);

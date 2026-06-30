@@ -9,7 +9,7 @@ import com.ventas.orders_service.dto.external.InventoryResponse;
 import com.ventas.orders_service.dto.external.StockMovementRequest;
 import com.ventas.orders_service.fallback.InventoryClientFallback;
 
-@FeignClient(name = "inventory-service", fallback = InventoryClientFallback.class)
+@FeignClient(name = "inventory-service", url = "http://inventory-service:8083", fallback = InventoryClientFallback.class)
 public interface InventoryClient {
 
     @GetMapping("/api/stock/{productId}")

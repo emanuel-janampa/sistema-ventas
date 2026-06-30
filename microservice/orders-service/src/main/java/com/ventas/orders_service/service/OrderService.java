@@ -13,7 +13,7 @@ public interface OrderService {
 
     OrderResponse getById(Long id);
 
-    OrderResponse update(Long id, OrderRequest request);
+    OrderResponse update(Long id, com.ventas.orders_service.dto.OrderStatusRequest request);
 
     void delete(Long id);
 }

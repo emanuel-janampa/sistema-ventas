@@ -159,13 +159,10 @@ public class OrderServiceImpl implements OrderService {
         // UPDATE
         // =========================
         @Override
-        public OrderResponse update(Long id, OrderRequest request) {
+        public OrderResponse update(Long id, com.ventas.orders_service.dto.OrderStatusRequest request) {
 
                 Order order = repository.findById(id)
                                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-
-                order.setCustomerId(request.getCustomerId());
-
                 if (request.getStatus() != null) {
                         order.setStatus(OrderStatus.valueOf(request.getStatus().toUpperCase()));
                 }

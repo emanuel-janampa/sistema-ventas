@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import com.ventas.orders_service.dto.external.CustomerResponse;
 import com.ventas.orders_service.fallback.CustomerClientFallback;
 
-@FeignClient(name = "customers-service", fallback = CustomerClientFallback.class)
+@FeignClient(name = "customers-service", url = "http://customers-service:8084", fallback = CustomerClientFallback.class)
 public interface CustomerClient {
 
     @GetMapping("/api/customers/{id}")

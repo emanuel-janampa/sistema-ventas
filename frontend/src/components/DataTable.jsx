@@ -12,7 +12,7 @@ import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import EmptyState from './EmptyState';
 
-export default function DataTable({ columns, rows, onEdit, onDelete, defaultPageSize = 10, emptyTitle = 'Sin resultados', emptyDescription = 'No hay registros para mostrar.', emptyAction = null }) {
+export default function DataTable({ columns, rows, onEdit, onDelete, onView, defaultPageSize = 10, emptyTitle = 'Sin resultados', emptyDescription = 'No hay registros para mostrar.', emptyAction = null }) {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(defaultPageSize);
   const [query, setQuery] = useState('');
@@ -68,18 +68,19 @@ export default function DataTable({ columns, rows, onEdit, onDelete, defaultPage
                 {columns.map((col) => (
                   <TableCell key={col.field}>{col.headerName}</TableCell>
                 ))}
-                {(onEdit || onDelete) && <TableCell>Acciones</TableCell>}
+                {(onEdit || onDelete || onView) && <TableCell>Acciones</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {nonEmpty.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((row, idx) => (
-                <TableRow hover role="checkbox" tabIndex={-1} key={row.id ?? `${page}-${idx}`}>
+                <TableRow hover role="checkbox" tabIndex={-1} key={row.id ?? row.productId ?? row.productoId ?? `${page}-${idx}`}>
                   {columns.map(col => (
                     <TableCell key={col.field}>{col.render ? col.render(row) : row[col.field]}</TableCell>
                   ))}
-                  {(onEdit || onDelete) && (
+                  {(onEdit || onDelete || onView) && (
                     <TableCell>
                       {onEdit && <Button size="small" variant="text" onClick={() => onEdit(row)}>Editar</Button>}
+                      {onView && <Button size="small" variant="text" onClick={() => onView(row)}>Ver detalle</Button>}
                       {onDelete && <Button size="small" variant="text" color="error" onClick={() => onDelete(row)}>Eliminar</Button>}
                     </TableCell>
                   )}

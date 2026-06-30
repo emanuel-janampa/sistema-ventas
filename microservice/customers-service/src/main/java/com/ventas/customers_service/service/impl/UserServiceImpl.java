@@ -35,6 +35,10 @@ public class UserServiceImpl implements UserService {
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
+        if (request.getPassword() == null || request.getPassword().trim().length() < 6) {
+            throw new RuntimeException("La contraseña es obligatoria y debe tener al menos 6 caracteres");
+        }
+
         User user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -79,11 +83,21 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("El usuario no existe"));
 
+        if (!user.getUsername().equalsIgnoreCase(request.getUsername())
+                && userRepository.existsByUsername(request.getUsername())) {
+            throw new RuntimeException("El nombre de usuario ya está en uso");
+        }
+
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new RuntimeException("El cliente no existe"));
 
         user.setUsername(request.getUsername());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            if (request.getPassword().length() < 6) {
+                throw new RuntimeException("La contraseña debe tener al menos 6 caracteres");
+            }
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
         user.setRole(request.getRole());
         user.setCustomer(customer);
 

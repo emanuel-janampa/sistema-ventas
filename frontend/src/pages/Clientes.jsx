@@ -56,23 +56,31 @@ export default function Clientes() {
     if (formValues.phone && !/^[0-9]+$/.test(formValues.phone)) { setSnackbar({ open: true, severity: 'error', message: 'El teléfono debe contener solo números' }); return; }
 
     try {
+      const payload = {
+        ...formValues,
+        phone: formValues.phone?.trim() || null,
+      };
+
       if (editing) {
-        await updateCliente(editing.id, formValues);
+        await updateCliente(editing.id, payload);
         setSnackbar({ open: true, severity: 'success', message: 'Cliente actualizado' });
       } else {
-        await createCliente(formValues);
+        await createCliente(payload);
         setSnackbar({ open: true, severity: 'success', message: 'Cliente creado' });
       }
       setOpenForm(false);
       fetchData();
-    } catch (err) { setSnackbar({ open: true, severity: 'error', message: 'Error al guardar cliente' }); }
-  };
+} catch (err) {
+        const message = err?.response?.data?.message || err?.response?.data?.error || 'Error al guardar cliente';
+        setSnackbar({ open: true, severity: 'error', message });
+      }
+    };
 
-  const handleDeleteClick = (item) => { setToDelete(item); setConfirmOpen(true); };
-  const handleDelete = async () => {
-    try { await deleteCliente(toDelete.id); setSnackbar({ open: true, severity: 'success', message: 'Cliente eliminado' }); setConfirmOpen(false); fetchData(); }
-    catch (err) { setSnackbar({ open: true, severity: 'error', message: 'Error al eliminar cliente' }); }
-  };
+    const handleDeleteClick = (item) => { setToDelete(item); setConfirmOpen(true); };
+    const handleDelete = async () => {
+      try { await deleteCliente(toDelete.id); setSnackbar({ open: true, severity: 'success', message: 'Cliente eliminado' }); setConfirmOpen(false); fetchData(); }
+      catch (err) { const message = err?.response?.data?.message || err?.response?.data?.error || 'Error al eliminar cliente'; setSnackbar({ open: true, severity: 'error', message }); }
+    };
 
   const columns = [
     { field: 'firstName', headerName: 'Nombre' },

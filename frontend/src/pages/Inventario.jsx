@@ -20,6 +20,34 @@ import AlertSnackbar from '../components/AlertSnackbar';
 import { getStock, registerMovimiento, getMovimientos } from '../services/inventario.service';
 import { getProductos } from '../services/productos.service';
 
+const extractPayload = (res) => {
+  if (!res) return [];
+  const data = res.data ?? res;
+  if (Array.isArray(data)) return data;
+  if (data?.data) return data.data;
+  return [];
+};
+
+const getEntityId = (item) => item?.id ?? item?._id;
+const getProductId = (item) => item?.productId ?? item?.productoId ?? item?.product?.id ?? item?.producto?.id ?? item?.id ?? item?._id;
+const getRelationProductId = (item) => item?.productId ?? item?.productoId ?? item?.product?.id ?? item?.producto?.id;
+const getProductName = (item) => {
+  const name = item?.nombre || item?.name || item?.productName || item?.productoNombre
+    || item?.product?.nombre || item?.product?.name || item?.product?.productName || item?.product?.productoNombre;
+  return typeof name === 'string' ? name.trim() : '';
+};
+
+const getCategoryName = (item) => {
+  if (!item) return '';
+  const category = item?.categoria || item?.category || item?.categoria?.nombre || item?.category?.name || item?.categoriaNombre || item?.categoryName;
+  return typeof category === 'string' ? category : (category?.nombre || category?.name || '');
+};
+
+const getProductStock = (product) => {
+  if (!product) return 0;
+  return product.stock ?? product.quantity ?? product.cantidad ?? product.qty ?? 0;
+};
+
 export default function Inventario() {
   const [stock, setStock] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
@@ -31,26 +59,19 @@ export default function Inventario() {
 
   const [snackbar, setSnackbar] = useState({ open: false, severity: 'success', message: '' });
 
-  const fetchStock = async () => {
-    setLoading(true);
-    try { const res = await getStock(); setStock(res.data || []); }
-    catch (err) { setSnackbar({ open: true, severity: 'error', message: 'No se pudo cargar el stock' }); }
-    finally { setLoading(false); }
-  };
-
-  const fetchMovimientos = async () => {
-    try { const res = await getMovimientos(); setMovimientos(res.data || []); }
-    catch (err) { /* ignore */ }
-  };
-
   const fetchProductos = async () => {
     try {
       const res = await getProductos();
-      const items = res.data || [];
-      const normalized = items.map((product) => ({
-        id: product.id || product.productId || product.productoId || product._id,
-        nombre: product.name || product.nombre || product.productName || product.productoNombre || '(sin nombre)',
-      })).filter((item) => item.id != null);
+      const items = extractPayload(res);
+      const normalized = items
+        .map((product) => ({
+          ...product,
+          id: getProductId(product),
+          nombre: getProductName(product),
+          categoria: product.categoria || product.category || null,
+          categoriaNombre: getCategoryName(product),
+        }))
+        .filter((item) => item.id != null && item.nombre);
       setProductos(normalized);
       return normalized;
     } catch (err) {
@@ -66,27 +87,39 @@ export default function Inventario() {
       const productMap = new Map(products.map((item) => [String(item.id), item]));
       const [stockRes, movimientosRes] = await Promise.all([getStock(), getMovimientos()]);
 
-      const stockData = (stockRes.data || []).map((item) => {
-        const productId = item.productoId || item.productId;
-        const product = productMap.get(String(productId));
+      const stockList = extractPayload(stockRes).map((item) => ({
+        ...item,
+        productId: getRelationProductId(item) ?? getEntityId(item),
+        stock: item.stock ?? item.cantidad ?? item.quantity ?? 0,
+      }));
+      const stockMap = new Map(stockList.map((item) => [String(item.productId), item]));
+
+      const stockData = products.map((product) => {
+        const productId = String(product.id);
+        const stockItem = stockMap.get(productId);
         return {
-          ...item,
+          ...product,
+          id: `stock-${productId}`,
           producto: product,
-          productoNombre: product?.nombre || item.productoNombre || item.productName || item.nombre || '',
-          stock: item.stock ?? item.cantidad ?? item.quantity ?? 0,
+          productoNombre: getProductName(product) || `Producto ${productId}`,
+          categoriaNombre: getCategoryName(product),
+          stock: stockItem?.stock ?? getProductStock(product),
+          productId,
         };
       });
 
-      const movData = (movimientosRes.data || []).map((item) => {
-        const productId = item.productoId || item.productId;
-        const product = productMap.get(String(productId));
+      const movData = extractPayload(movimientosRes).map((item, index) => {
+        const productId = String(getProductId(item));
+        const product = productMap.get(productId);
         return {
           ...item,
+          id: item.id != null ? `mov-${item.id}` : `mov-${index}-${productId}`,
           producto: product,
-          productoNombre: product?.nombre || item.productoNombre || item.productName || item.nombre || '',
+          productoNombre: getProductName(product) || getProductName(item) || `Producto ${productId}`,
           cantidad: item.cantidad ?? item.quantity ?? 0,
-          nota: item.nota || item.note || item.reason || '',
-          tipo: item.tipo || item.type || '',
+          nota: item.nota ?? item.note ?? item.reason ?? '',
+          tipo: item.tipo ?? item.type ?? '',
+          productId,
         };
       }).reverse();
 
@@ -137,7 +170,8 @@ export default function Inventario() {
   };
 
   const stockColumns = [
-    { field: 'productoId', headerName: 'Producto', render: (r) => r.producto?.nombre || r.productoNombre || r.productoId },
+    { field: 'productoNombre', headerName: 'Producto' },
+    { field: 'categoriaNombre', headerName: 'Categoría' },
     {
       field: 'estado',
       headerName: 'Estado',
@@ -152,10 +186,11 @@ export default function Inventario() {
   ];
 
   const movColumns = [
-    { field: 'producto', headerName: 'Producto', render: (r) => r.producto?.nombre || r.productoNombre || r.productoId },
+    { field: 'productoNombre', headerName: 'Producto' },
     { field: 'tipo', headerName: 'Tipo' },
     { field: 'cantidad', headerName: 'Cantidad' },
     { field: 'nota', headerName: 'Nota' },
+    { field: 'createdAt', headerName: 'Fecha', render: (r) => r.createdAt ? new Date(r.createdAt).toLocaleString() : '' },
   ];
 
   return (

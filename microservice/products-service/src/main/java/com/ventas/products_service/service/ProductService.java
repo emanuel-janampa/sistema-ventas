@@ -5,6 +5,7 @@ import com.ventas.products_service.dto.ProductResponse;
 import java.util.List;
 
 public interface ProductService {
+
     ProductResponse create(ProductRequest request);
 
     List<ProductResponse> getAll();

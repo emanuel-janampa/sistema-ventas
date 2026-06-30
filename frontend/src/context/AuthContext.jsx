@@ -1,14 +1,34 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const AuthContext = createContext(null);
+
+const isTokenExpired = (token) => {
+  if (!token) return true;
+  try {
+    const [, payload] = token.split('.');
+    if (!payload) return true;
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded.exp ? decoded.exp * 1000 < Date.now() : true;
+  } catch {
+    return true;
+  }
+};
 
 const readStoredAuth = () => {
   if (typeof window === 'undefined') {
     return { token: null, role: 'CLIENTE', username: '' };
   }
 
+  const token = localStorage.getItem('token');
+  if (!token || isTokenExpired(token)) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('username');
+    return { token: null, role: 'CLIENTE', username: '' };
+  }
+
   return {
-    token: localStorage.getItem('token') || null,
+    token,
     role: localStorage.getItem('role') || 'CLIENTE',
     username: localStorage.getItem('username') || '',
   };
@@ -30,6 +50,14 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('username');
     setAuth({ token: null, role: 'CLIENTE', username: '' });
   };
+
+  React.useEffect(() => {
+    const handleLogout = () => {
+      logout();
+    };
+    window.addEventListener('app-logout', handleLogout);
+    return () => window.removeEventListener('app-logout', handleLogout);
+  }, []);
 
   const value = useMemo(() => ({
     auth,

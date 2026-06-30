@@ -15,53 +15,81 @@ import MenuItem from '@mui/material/MenuItem';
 import DataTable from '../components/DataTable';
 import Loader from '../components/Loader';
 import AlertSnackbar from '../components/AlertSnackbar';
-import ConfirmDialog from '../components/ConfirmDialog';
-
-import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from '../services/usuarios.service';
+import { getUsuarios, createUsuario, updateUsuario } from '../services/usuarios.service';
+import { getClientes } from '../services/clientes.service';
 
 export default function Usuarios() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [formValues, setFormValues] = useState({ username: '', nombre: '', role: 'ADMIN' });
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [toDelete, setToDelete] = useState(null);
+  const [formValues, setFormValues] = useState({ username: '', password: '', role: 'ADMIN', customerId: '' });
+  const [clients, setClients] = useState([]);
   const [snackbar, setSnackbar] = useState({ open: false, severity: 'success', message: '' });
 
   const fetchData = async () => {
     setLoading(true);
-    try { const res = await getUsuarios(); setRows(res.data || []); }
-    catch (err) { setSnackbar({ open: true, severity: 'error', message: 'No se pudieron cargar los usuarios' }); }
-    finally { setLoading(false); }
+    try {
+      const [usersRes, clientsRes] = await Promise.all([getUsuarios(), getClientes()]);
+      const clientMap = new Map((clientsRes.data || []).map((c) => [c.id, c.nombre || `${c.firstName} ${c.lastName}`]));
+      const users = (usersRes.data || []).map((user) => ({
+        ...user,
+        nombre: clientMap.get(user.customerId) || 'Sin nombre',
+        status: user.status || 'ACTIVO',
+      }));
+      setRows(users);
+      setClients((clientsRes.data || []).map((c) => ({ id: c.id, nombre: c.nombre || `${c.firstName} ${c.lastName}` })));
+    } catch (err) {
+      setSnackbar({ open: true, severity: 'error', message: 'No se pudieron cargar los usuarios o clientes' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleOpenCreate = () => { setEditing(null); setFormValues({ username: '', nombre: '', role: 'ADMIN' }); setOpenForm(true); };
-  const handleOpenEdit = (item) => { setEditing(item); setFormValues({ username: item.username || '', nombre: item.nombre || '', role: item.role || 'ADMIN' }); setOpenForm(true); };
+  const handleOpenCreate = () => { setEditing(null); setFormValues({ username: '', password: '', role: 'ADMIN', customerId: '' }); setOpenForm(true); };
+  const handleOpenEdit = (item) => { setEditing(item); setFormValues({ username: item.username || '', password: '', role: item.role || 'ADMIN', customerId: item.customerId || '' }); setOpenForm(true); };
 
   const handleSave = async () => {
-    // Validaciones
     if (!formValues.username || !formValues.username.trim()) { setSnackbar({ open: true, severity: 'error', message: 'El usuario es obligatorio' }); return; }
+    if (!formValues.customerId) { setSnackbar({ open: true, severity: 'error', message: 'Debe seleccionar un cliente' }); return; }
     if (!editing) {
       if (!formValues.password || formValues.password.length < 6) { setSnackbar({ open: true, severity: 'error', message: 'La contraseña es obligatoria y debe tener al menos 6 caracteres' }); return; }
+    } else if (formValues.password && formValues.password.length > 0 && formValues.password.length < 6) {
+      setSnackbar({ open: true, severity: 'error', message: 'La contraseña debe tener al menos 6 caracteres' }); return;
+    }
+
+    const payload = {
+      username: formValues.username,
+      role: formValues.role,
+      customerId: Number(formValues.customerId),
+    };
+
+    if (!editing || formValues.password?.trim()) {
+      payload.password = formValues.password;
     }
 
     try {
-      if (editing) { await updateUsuario(editing.id, formValues); setSnackbar({ open: true, severity: 'success', message: 'Usuario actualizado' }); }
-      else { await createUsuario(formValues); setSnackbar({ open: true, severity: 'success', message: 'Usuario creado' }); }
-      setOpenForm(false); fetchData();
-    } catch (err) { setSnackbar({ open: true, severity: 'error', message: 'Error al guardar usuario' }); }
+      if (editing) {
+        await updateUsuario(editing.id, payload);
+        setSnackbar({ open: true, severity: 'success', message: 'Usuario actualizado' });
+      } else {
+        await createUsuario(payload);
+        setSnackbar({ open: true, severity: 'success', message: 'Usuario creado' });
+      }
+      setOpenForm(false);
+      fetchData();
+    } catch (err) {
+      setSnackbar({ open: true, severity: 'error', message: err?.response?.data?.error || 'Error al guardar usuario' });
+    }
   };
-
-  const handleDeleteClick = (item) => { setToDelete(item); setConfirmOpen(true); };
-  const handleDelete = async () => { try { await deleteUsuario(toDelete.id); setSnackbar({ open: true, severity: 'success', message: 'Usuario eliminado' }); setConfirmOpen(false); fetchData(); } catch (err) { setSnackbar({ open: true, severity: 'error', message: 'Error al eliminar usuario' }); } };
 
   const columns = [
     { field: 'username', headerName: 'Usuario' },
     { field: 'nombre', headerName: 'Nombre' },
     { field: 'role', headerName: 'Rol' },
+    { field: 'status', headerName: 'Estado' },
   ];
 
   return (
@@ -71,21 +99,35 @@ export default function Usuarios() {
         <Button variant="contained" onClick={handleOpenCreate}>Nuevo Usuario</Button>
       </Box>
 
-      {loading ? <Loader /> : <DataTable columns={columns} rows={rows} onEdit={(r) => handleOpenEdit(r)} onDelete={(r) => handleDeleteClick(r)} />}
+      {loading ? <Loader /> : <DataTable columns={columns} rows={rows} onEdit={(r) => handleOpenEdit(r)} />}
 
       <Dialog open={openForm} onClose={() => setOpenForm(false)} fullWidth>
         <DialogTitle>{editing ? 'Editar Usuario' : 'Nuevo Usuario'}</DialogTitle>
         <DialogContent>
           <TextField autoFocus margin="normal" label="Usuario" fullWidth value={formValues.username} onChange={(e) => setFormValues((prev) => ({ ...prev, username: e.target.value }))} />
-          <TextField margin="normal" label="Nombre" fullWidth value={formValues.nombre} onChange={(e) => setFormValues((prev) => ({ ...prev, nombre: e.target.value }))} />
-          {!editing && (
-            <TextField margin="normal" label="Contraseña" type="password" fullWidth value={formValues.password || ''} onChange={(e) => setFormValues((prev) => ({ ...prev, password: e.target.value }))} />
-          )}
+          <TextField
+            margin="normal"
+            label="Contraseña"
+            type="password"
+            fullWidth
+            value={formValues.password || ''}
+            onChange={(e) => setFormValues((prev) => ({ ...prev, password: e.target.value }))}
+            helperText={editing ? 'Dejar vacío para mantener la contraseña actual' : ''}
+          />
+          <FormControl fullWidth margin="normal" size="small">
+            <InputLabel>Cliente</InputLabel>
+            <Select value={formValues.customerId} label="Cliente" onChange={(e) => setFormValues((prev) => ({ ...prev, customerId: e.target.value }))}>
+              <MenuItem value="">Seleccionar cliente</MenuItem>
+              {clients.map((client) => (
+                <MenuItem key={client.id} value={client.id}>{client.nombre}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <FormControl fullWidth margin="normal" size="small">
             <InputLabel>Rol</InputLabel>
             <Select value={formValues.role} label="Rol" onChange={(e) => setFormValues((prev) => ({ ...prev, role: e.target.value }))}>
               <MenuItem value="ADMIN">ADMIN</MenuItem>
-              <MenuItem value="CLIENTE">CLIENTE</MenuItem>
+              <MenuItem value="CUSTOMER">CUSTOMER</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>
@@ -94,8 +136,6 @@ export default function Usuarios() {
           <Button variant="contained" onClick={handleSave}>{editing ? 'Guardar' : 'Crear'}</Button>
         </DialogActions>
       </Dialog>
-
-      <ConfirmDialog open={confirmOpen} title="Eliminar usuario" content={`¿Desea eliminar al usuario "${toDelete?.username}"?`} onCancel={() => setConfirmOpen(false)} onConfirm={handleDelete} />
       <AlertSnackbar open={snackbar.open} onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))} severity={snackbar.severity}>{snackbar.message}</AlertSnackbar>
     </Box>
   );
